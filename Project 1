@@ -1,0 +1,152 @@
+const convertHandler = {
+  num: '',
+  unit: '',
+  returnNum: '',
+  returnUnit: '',
+  spellOutUnit: '',
+
+  getNum(input) {
+    const regex = /^[0-9\.\/]+$/;
+    if (regex.test(input)) {
+      if (input.includes('/')) {
+        const fraction = input.split('/');
+        this.num = parseFloat(fraction[0]) / parseFloat(fraction[1]);
+      } else {
+        this.num = parseFloat(input);
+      }
+    } else {
+      throw new Error('Invalid number');
+    }
+  },
+
+  getUnit(input) {
+    const units = ['gal', 'L', 'i', 'km', 'lbs', 'kg'];
+    const unit = input.replace(/[0-9\.\/]+/g, '').trim();
+    if (units.includes(unit)) {
+      this.unit = unit;
+    } else {
+      throw new Error('Invalid unit');
+    }
+  },
+
+  getReturnUnit() {
+    switch (this.unit) {
+      case 'gal':
+        this.returnUnit = 'L';
+        break;
+      case 'L':
+        this.returnUnit = 'gal';
+        break;
+      case 'i':
+        this.returnUnit = 'km';
+        break;
+      case 'km':
+        this.returnUnit = 'i';
+        break;
+      case 'lbs':
+        this.returnUnit = 'kg';
+        break;
+      case 'kg':
+        this.returnUnit = 'lbs';
+        break;
+    }
+  },
+
+  spellOutUnit() {
+    switch (this.returnUnit) {
+      case 'gal':
+        this.spellOutUnit = 'gallons';
+        break;
+      case 'L':
+        this.spellOutUnit = 'liters';
+        break;
+      case 'i':
+        this.spellOutUnit = 'iles';
+        break;
+      case 'km':
+        this.spellOutUnit = 'kilometers';
+        break;
+      case 'lbs':
+        this.spellOutUnit = 'pounds';
+        break;
+      case 'kg':
+        this.spellOutUnit = 'kilograms';
+        break;
+    }
+  },
+
+  convert() {
+    switch (this.unit) {
+      case 'gal':
+        this.returnNum = this.num * 3.78541;
+        break;
+      case 'L':
+        this.returnNum = this.num / 3.78541;
+        break;
+      case 'i':
+        this.returnNum = this.num * 1.60934;
+        break;
+      case 'km':
+        this.returnNum = this.num / 1.60934;
+        break;
+      case 'lbs':
+        this.returnNum = this.num / 2.20462;
+        break;
+      case 'kg':
+        this.returnNum = this.num * 2.20462;
+        break;
+    }
+  },
+};
+
+module.exports = convertHandler;
+const express = require('express');
+const router = express.Router();
+const convertHandler = require('../controllers/convertHandler');
+
+router.get('/api/convert', (req, res) => {
+  const input = req.query.input;
+  try {
+    convertHandler.getNum(input);
+    convertHandler.getUnit(input);
+    convertHandler.getReturnUnit();
+    convertHandler.spellOutUnit();
+    convertHandler.convert();
+    res.json({
+      initNum: convertHandler.num,
+      initUnit: convertHandler.unit,
+      returnNum: convertHandler.returnNum,
+      returnUnit: convertHandler.returnUnit,
+      string: `${convertHandler.num} ${convertHandler.unit} converts to ${convertHandler.returnNum} ${convertHandler.spellOutUnit}`,
+    });
+  } catch (error) {
+    res.json({ error: error.message });
+  }
+});
+
+module.exports = router;
+const convertHandler = require('../controllers/convertHandler');
+
+describe('convertHandler', () => {
+  it('should correctly read a whole number input', () => {
+    convertHandler.getNum('10');
+    expect(convertHandler.num).toBe(10);
+  });
+
+  it('should correctly read a decimal number input', () => {
+    convertHandler.getNum('10.5');
+    expect(convertHandler.num).toBe(10.5);
+  });
+
+  it('should correctly read a fractional input', () => {
+    convertHandler.getNum('1/2');
+    expect(convertHandler.num).toBe(0.5);
+  });
+
+  it('should correctly read a fractional input with a decimal', () => {
+    convertHandler.getNum('1.5/2');
+    expect(convertHandler.num).toBe(0.75);
+  });
+
+  it('should correctly return an error on a double-fraction (i.e. 3/2/3)', () => {
+    expect(() => convertHandler
